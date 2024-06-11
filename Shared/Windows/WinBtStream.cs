@@ -142,6 +142,12 @@ namespace Shared.Windows
                     // Open the file handle with the specified sharing mode and an overlapped file attribute flag for asynchronous operation
                     _fileHandle = CreateFile(_hidPath, FileAccess.ReadWrite, SharingMode, IntPtr.Zero, FileMode.Open, EFileAttributes.Overlapped, IntPtr.Zero);
                 }
+
+                if (_fileHandle.IsInvalid)
+                {
+                    throw new InvalidDataException("Invalid file handle");
+                }
+
                 _fileStream = new FileStream(_fileHandle, FileAccess.ReadWrite, 22, true);
             }
             catch (Exception)
@@ -164,9 +170,10 @@ namespace Shared.Windows
         {
             // Assume it is the Microsoft Stack
             BtStack resultStack = BtStack.Microsoft;
-            IntPtr parentDeviceInfo = IntPtr.Zero;
-            SP_DEVINFO_DATA parentData = new SP_DEVINFO_DATA();
-            parentData.cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVINFO_DATA));
+            SP_DEVINFO_DATA parentData = new SP_DEVINFO_DATA
+            {
+                cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVINFO_DATA))
+            };
 
             int status = 0;
             int problemNum = 0;
@@ -175,9 +182,7 @@ namespace Shared.Windows
 
             if (result != 0) return resultStack; // Failed
 
-            uint parentDevice;
-
-            result = CM_Get_Parent(out parentDevice, data.DevInst, 0);
+            result = CM_Get_Parent(out uint parentDevice, data.DevInst, 0);
 
             if (result != 0) return resultStack; // Failed
 
@@ -189,26 +194,25 @@ namespace Shared.Windows
 
             string id = new string(parentId).Replace("\0", "");
 
-            Guid g = Guid.Empty;
-            HidD_GetHidGuid(out g);
-            parentDeviceInfo = SetupDiCreateDeviceInfoList(ref g, IntPtr.Zero);
+            HidD_GetHidGuid(out Guid g);
+            IntPtr parentDeviceInfo = SetupDiCreateDeviceInfoList(ref g, IntPtr.Zero);
 
             // TODO: This fails, something not right
-            bool success = SetupDiOpenDeviceInfo(parentDeviceInfo, id, IntPtr.Zero, 0, ref parentData);
+            bool success = SetupDiOpenDeviceInfo(IntPtr.Zero, id, IntPtr.Zero, 0, ref parentData);
 
             if (success)
             {
-                int requiredSize = 0;
-                ulong devicePropertyType;
 
-                DEVPROPKEY requestedKey = new DEVPROPKEY();
-                requestedKey.fmtid = new Guid(0xa8b865dd, 0x2e3d, 0x4094, 0xad, 0x97, 0xe5, 0x93, 0xa7, 0xc, 0x75, 0xd6);
-                requestedKey.pid = 9;
+                DEVPROPKEY requestedKey = new DEVPROPKEY
+                {
+                    fmtid = new Guid(0xa8b865dd, 0x2e3d, 0x4094, 0xad, 0x97, 0xe5, 0x93, 0xa7, 0xc, 0x75, 0xd6),
+                    pid = 9
+                };
 
-                SetupDiGetDeviceProperty(parentDeviceInfo, parentData, requestedKey, out devicePropertyType, null, 0, out requiredSize, 0);
+                SetupDiGetDeviceProperty(IntPtr.Zero, parentData, requestedKey, out ulong devicePropertyType, null, 0, out int requiredSize, 0);
 
                 char[] buffer = new char[requiredSize];
-                success = SetupDiGetDeviceProperty(parentDeviceInfo, parentData, requestedKey, out devicePropertyType, buffer, requiredSize, out requiredSize, 0);
+                success = SetupDiGetDeviceProperty(IntPtr.Zero, parentData, requestedKey, out devicePropertyType, buffer, requiredSize, out requiredSize, 0);
 
                 if (success)
                 {
@@ -221,12 +225,12 @@ namespace Shared.Windows
                     }
                 }
 
-                SetupDiDestroyDeviceInfoList(parentDeviceInfo);
+                SetupDiDestroyDeviceInfoList(IntPtr.Zero);
             }
             else
             {
                 var error = GetLastError();
-                SetupDiDestroyDeviceInfoList(parentDeviceInfo);
+                SetupDiDestroyDeviceInfoList(IntPtr.Zero);
             }
 
             return resultStack;
@@ -235,12 +239,11 @@ namespace Shared.Windows
         public static List<DeviceInfo> GetPaths()
         {
             var result = new List<DeviceInfo>();
-            Guid guid;
             int index = 0;
             SafeFileHandle handle;
 
             // Get GUID of the HID class
-            HidD_GetHidGuid(out guid);
+            HidD_GetHidGuid(out Guid guid);
 
             // handle for HID devices
             IntPtr hDevInfo = SetupDiGetClassDevs(ref guid, null, IntPtr.Zero, (uint)(DIGCF.DeviceInterface | DIGCF.Present));
@@ -251,17 +254,19 @@ namespace Shared.Windows
             // Step through all devices
             while (SetupDiEnumDeviceInterfaces(hDevInfo, IntPtr.Zero, ref guid, index, ref diData))
             {
-                uint size;
-
                 // Get Device Buffer Size
-                SetupDiGetDeviceInterfaceDetail(hDevInfo, ref diData, IntPtr.Zero, 0, out size, IntPtr.Zero);
+                SetupDiGetDeviceInterfaceDetail(hDevInfo, ref diData, IntPtr.Zero, 0, out uint size, IntPtr.Zero);
 
                 // Create Detail Struct
-                SP_DEVICE_INTERFACE_DETAIL_DATA diDetail = new SP_DEVICE_INTERFACE_DETAIL_DATA();
-                diDetail.size = (uint)(IntPtr.Size == 8 ? 8 : 5);// 4 + Marshal.SystemDefaultCharSize);
+                SP_DEVICE_INTERFACE_DETAIL_DATA diDetail = new SP_DEVICE_INTERFACE_DETAIL_DATA
+                {
+                    size = (uint)(IntPtr.Size == 8 ? 8 : 5)// 4 + Marshal.SystemDefaultCharSize);
+                };
 
-                SP_DEVINFO_DATA deviceInfoData = new SP_DEVINFO_DATA();
-                deviceInfoData.cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVINFO_DATA));
+                SP_DEVINFO_DATA deviceInfoData = new SP_DEVINFO_DATA
+                {
+                    cbSize = (uint)Marshal.SizeOf(typeof(SP_DEVINFO_DATA))
+                };
 
                 // Populate Detail Struct
                 if (SetupDiGetDeviceInterfaceDetail(hDevInfo, ref diData, ref diDetail, size, out size, ref deviceInfoData))

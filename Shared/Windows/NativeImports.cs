@@ -64,7 +64,7 @@ namespace Shared.Windows
         [DllImport("kernel32.dll")]
         public extern static uint GetLastError();
 
-        [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern SafeFileHandle CreateFile(
             string fileName,
             [MarshalAs(UnmanagedType.U4)] FileAccess fileAccess,
@@ -227,6 +227,11 @@ namespace Shared.Windows
         [DllImport("Irprops.cpl", SetLastError = true)]
         public static extern bool BluetoothFindNextDevice(
             IntPtr hFind, 
+            ref BLUETOOTH_DEVICE_INFO pbtdi);
+
+        [DllImport("bthprops.cpl", SetLastError = true)]
+        public static extern int BluetoothGetDeviceInfo(
+            IntPtr hRadio,
             ref BLUETOOTH_DEVICE_INFO pbtdi);
 
         [DllImport("irprops.cpl", SetLastError = true)]

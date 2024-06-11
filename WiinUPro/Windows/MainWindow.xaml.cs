@@ -99,74 +99,76 @@ namespace WiinUPro
             // Test GCN Device
             else
             {
-                devices.Add(new Shared.DeviceInfo() { DevicePath = "Dummy GCN", VID = "057E", PID = "0337", Type = NintrollerLib.ControllerType.Other });
+                //devices.Add(new Shared.DeviceInfo() { DevicePath = "Dummy GCN", VID = "057E", PID = "0337", Type = NintrollerLib.ControllerType.Other });
             }
 
             // Test Device
-            devices.Add(new Shared.DeviceInfo() { DevicePath = "Dummy", Type = NintrollerLib.ControllerType.ProController });
-            devices.Add(new Shared.DeviceInfo() { DevicePath = "Dummy Wiimote", Type = NintrollerLib.ControllerType.Wiimote });
+            //devices.Add(new Shared.DeviceInfo() { DevicePath = "Dummy", Type = NintrollerLib.ControllerType.ProController });
+            //devices.Add(new Shared.DeviceInfo() { DevicePath = "Dummy Wiimote", Type = NintrollerLib.ControllerType.Wiimote });
 #endif
 
             foreach (var info in devices)
             {
                 // Check if we are already showing this one
-                DeviceStatus existing = _availableDevices.Find((d) => d.Info.SameDevice(info.DeviceID));
+                DeviceStatus existing = _availableDevices.Find(d => d.Info.SameDevice(info.DeviceID));
 
                 // If not add it
                 if (existing == null)
                 {
-                    var status = new DeviceStatus(info, info == gcnDevice ? gcnStream : null);
-                    status.ConnectClick = DoConnect;
-                    status.TypeUpdated = (s, t) =>
+                    var status = new DeviceStatus(info, info == gcnDevice ? gcnStream : null)
                     {
-                        var p = AppPrefs.Instance.GetDevicePreferences(s.Info.DevicePath);
-                        string title = "";
+                        ConnectClick = DoConnect,
+                        TypeUpdated = (s, t) =>
+                        {
+                            var p = AppPrefs.Instance.GetDevicePreferences(s.Info.DevicePath);
+                            string title = "";
 
-                        if (p != null && !string.IsNullOrWhiteSpace(p.nickname))
-                        {
-                            title = p.nickname;
-                        }
-                        else
-                        {
-                            title = t.ToString();
-                        }
+                            if (p != null && !string.IsNullOrWhiteSpace(p.nickname))
+                            {
+                                title = p.nickname;
+                            }
+                            else
+                            {
+                                title = t.ToString();
+                            }
 
-                        foreach (var tab in tabControl.Items)
-                        {
-                            if (tab is TabItem && (tab as TabItem).Content == s.Control)
-                            {
-                                ChangeIcon(tab as TabItem, t);
-                                ChangeTitle(tab as TabItem, title);
-                            }
-                        }
-                    };
-                    status.CloseTab = (s) =>
-                    {
-                        // Find associated tab, skip first as it is home
-                        for (int i = 1; i < tabControl.Items.Count; i++)
-                        {
-                            var tab = tabControl.Items[i];
-                            if (tab is TabItem && (tab as TabItem).Content == s.Control)
-                            {
-                                tabControl.Items.RemoveAt(i);
-                                break;
-                            }
-                        }
-                    };
-                    status.OnPrefsChange = (s, p) =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(p.nickname))
-                        {
                             foreach (var tab in tabControl.Items)
                             {
                                 if (tab is TabItem && (tab as TabItem).Content == s.Control)
                                 {
-                                    ChangeTitle(tab as TabItem, p.nickname);
+                                    ChangeIcon(tab as TabItem, t);
+                                    ChangeTitle(tab as TabItem, title);
                                 }
                             }
-                        }
+                        },
+                        CloseTab = (s) =>
+                        {
+                            // Find associated tab, skip first as it is home
+                            for (int i = 1; i < tabControl.Items.Count; i++)
+                            {
+                                var tab = tabControl.Items[i];
+                                if (tab is TabItem && (tab as TabItem).Content == s.Control)
+                                {
+                                    tabControl.Items.RemoveAt(i);
+                                    break;
+                                }
+                            }
+                        },
+                        OnPrefsChange = (s, p) =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(p.nickname))
+                            {
+                                foreach (var tab in tabControl.Items)
+                                {
+                                    if (tab is TabItem && (tab as TabItem).Content == s.Control)
+                                    {
+                                        ChangeTitle(tab as TabItem, p.nickname);
+                                    }
+                                }
+                            }
+                        },
+                        OnRumbleSubscriptionChange = RumbleSettingsChanged
                     };
-                    status.OnRumbleSubscriptionChange = RumbleSettingsChanged;
                     _availableDevices.Add(status);
                     statusStack.Children.Add(status);
 

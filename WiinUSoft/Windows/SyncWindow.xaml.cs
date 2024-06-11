@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -53,7 +54,8 @@ namespace WiinUSoft.Windows
 
                 // Find more
                 more = NativeImports.BluetoothFindNextRadio(ref handle, out foundRadio);
-            } while (more);
+            }
+            while (more);
 
             if (btRadios.Count > 0)
             {
@@ -96,6 +98,8 @@ namespace WiinUSoft.Windows
                             {
                                 do
                                 {
+                                    var infoStat = NativeImports.BluetoothGetDeviceInfo(radio, ref deviceInfo);
+                                    Debug.WriteLine("Info: " + infoStat);
                                     // Note: Switch Pro Controller is simply called "Pro Controller"
                                     // Note: The Wiimote MotionPlus reveals its name only after BT authentication
                                     var probeUnnamed = String.IsNullOrEmpty(deviceInfo.szName);
@@ -104,6 +108,10 @@ namespace WiinUSoft.Windows
                                         if (!probeUnnamed)
                                         {
                                             Prompt("Found " + deviceInfo.szName);
+                                        }
+                                        else
+                                        {
+                                            Prompt("Unnmamed Device Found.");
                                         }
 
                                         StringBuilder password = new StringBuilder();
@@ -123,10 +131,16 @@ namespace WiinUSoft.Windows
                                         {
                                             var errAuth = NativeImports.BluetoothAuthenticateDevice(IntPtr.Zero, radio, ref deviceInfo, password.ToString(), 6);
                                             success = errAuth == 0;
-                                            if(probeUnnamed)
+                                            Debug.WriteLine("Auth: " + errAuth);
+
+                                            if (probeUnnamed)
                                             {
-                                                if(String.IsNullOrEmpty(deviceInfo.szName) || !deviceInfo.szName.StartsWith(SyncWindow.deviceNameMatch))
+                                                infoStat = NativeImports.BluetoothGetDeviceInfo(radio, ref deviceInfo);
+                                                Debug.WriteLine("Info: " + infoStat);
+
+                                                if (String.IsNullOrEmpty(deviceInfo.szName) || !deviceInfo.szName.StartsWith(SyncWindow.deviceNameMatch))
                                                 {
+                                                    Debug.WriteLine("deviceInfo lost!");
                                                     continue;
                                                 }
                                                 else if(success)
@@ -142,13 +156,18 @@ namespace WiinUSoft.Windows
                                         {
                                             var errService = NativeImports.BluetoothEnumerateInstalledServices(radio, ref deviceInfo, ref pcService, guids);
                                             success = errService == 0;
+                                            Debug.WriteLine("Service: " + errService);
                                         }
+
+                                        infoStat = NativeImports.BluetoothGetDeviceInfo(radio, ref deviceInfo);
+                                        Debug.WriteLine("Info: " + infoStat);
 
                                         // Set to HID service
                                         if (success)
                                         {
                                             var errActivate = NativeImports.BluetoothSetServiceState(radio, ref deviceInfo, ref HidServiceClass, 0x01);
                                             success = errActivate == 0;
+                                            Debug.WriteLine("Activate: " + errActivate);
                                         }
 
                                         if (success)
@@ -161,12 +180,19 @@ namespace WiinUSoft.Windows
                                             Prompt("Failed to Pair.");
                                         }
                                     }
-                                } while (NativeImports.BluetoothFindNextDevice(found, ref deviceInfo));
+                                }
+                                while (NativeImports.BluetoothFindNextDevice(found, ref deviceInfo));
+                            }
+                            else
+                            {
+                                // No devices found
+                                // Prompt("No devices found.");
                             }
                         }
                         else
                         {
                             // Failed to get BT Radio info
+                            Prompt("Failed to get BT Radio info.");
                         }
                     }
                 }
@@ -174,7 +200,7 @@ namespace WiinUSoft.Windows
                 // Close each Radio
                 foreach (var openRadio in btRadios)
                 {
-                    NativeImports.CloseHandle(openRadio);
+                    // NativeImports.CloseHandle(openRadio);
                 }
             }
             else

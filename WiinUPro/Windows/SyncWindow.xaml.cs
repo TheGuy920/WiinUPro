@@ -119,6 +119,13 @@ namespace WiinUPro.Windows
 
                                             if (success)
                                             {
+                                                Prompt("Re-Fetching Device Info");
+                                                var errService = NativeImports.BluetoothGetDeviceInfo(btRadios[r], ref deviceInfo);
+                                                success = errService == 0;
+                                            }
+
+                                            if (success)
+                                            {
                                                 Prompt(Globalization.Translate("Sync_Service"));
                                                 var errService = NativeImports.BluetoothEnumerateInstalledServices(btRadios[r], ref deviceInfo, ref pcService, guids);
                                                 success = errService == 0;

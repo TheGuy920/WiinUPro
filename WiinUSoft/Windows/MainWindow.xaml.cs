@@ -14,6 +14,7 @@ using System.Windows.Threading;
 using System.Windows.Input;
 using Shared;
 using Shared.Windows;
+using System.Diagnostics;
 
 namespace WiinUSoft
 {
@@ -286,6 +287,8 @@ namespace WiinUSoft
                 //    break;
             }
             
+            Debug.WriteLine("DeviceControl_OnConnectStateChange: " + newState.ToString());
+
             if (menu_AutoRefresh.IsChecked)
             {
                 AutoRefresh(true, groupAvailable.Children.Count + groupXinput.Children.Count);
@@ -306,6 +309,7 @@ namespace WiinUSoft
             deviceList.Remove(sender);
 
             AutoRefresh(menu_AutoRefresh.IsChecked, deviceList.Count);
+            Debug.WriteLine("DeviceControl_OnConnectionLost");
         }
         
         private void btnDetatchAllXInput_Click(object sender, RoutedEventArgs e)
